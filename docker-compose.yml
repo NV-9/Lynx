@@ -1,0 +1,12 @@
+services:
+  lynx:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      PORT: "8080"
+      BASE_URL: "${BASE_URL:-http://localhost:8080}"
+      DATA_DIR: "/data"
+    restart: unless-stopped

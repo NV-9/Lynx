@@ -1,0 +1,37 @@
+.git
+.gitignore
+.vscode
+.idea
+.claude
+
+.env
+.env.*
+!.env.example
+
+# Local runtime data
+/data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local/build artifacts
+lynx
+lynx.exe
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+tmp/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Docs not required for image build context
+README.md
