@@ -45,11 +45,16 @@ func generateSessionID() (string, error) {
 }
 
 func (h *Handler) serveHTML(w http.ResponseWriter, name string) {
+	h.serveHTMLWithStatus(w, name, http.StatusOK)
+}
+
+func (h *Handler) serveHTMLWithStatus(w http.ResponseWriter, name string, status int) {
 	data, err := fs.ReadFile(h.static, name)
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	w.Write(data)
 }

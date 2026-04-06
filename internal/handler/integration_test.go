@@ -37,6 +37,7 @@ func testRouter(t *testing.T) (*sql.DB, http.Handler) {
 		"login.html": &fstest.MapFile{Data: []byte("<html>login</html>")},
 		"setup.html": &fstest.MapFile{Data: []byte("<html>setup</html>")},
 		"admin.html": &fstest.MapFile{Data: []byte("<html>admin</html>")},
+		"404.html":   &fstest.MapFile{Data: []byte("<html>custom 404</html>")},
 	}
 
 	h := handler.New(db, "http://localhost:8080", staticFS)
@@ -70,6 +71,7 @@ func testRouter(t *testing.T) (*sql.DB, http.Handler) {
 	})
 
 	r.Get("/{slug}", h.RedirectSlug)
+	r.NotFound(h.NotFoundPage)
 
 	return db, r
 }
@@ -528,5 +530,37 @@ func TestAnalyticsFiltersAndDateValidation(t *testing.T) {
 	rrInvalidDate := doAuthedRequest(t, router, http.MethodGet, "/api/analytics?start_date=2026-04-10&end_date=2026-04-01", "", "", adminSID)
 	if rrInvalidDate.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for invalid date range, got %d", rrInvalidDate.Code)
+	}
+}
+
+func TestMissingSlugRendersCustom404Page(t *testing.T) {
+	db, router := testRouter(t)
+	defer db.Close()
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/no-such-slug", nil)
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown slug, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "custom 404") {
+		t.Fatalf("expected custom 404 page body, got %q", rr.Body.String())
+	}
+}
+
+func TestUnmatchedPathRendersCustom404Page(t *testing.T) {
+	db, router := testRouter(t)
+	defer db.Close()
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/totally/missing/path", nil)
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unmatched path, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "custom 404") {
+		t.Fatalf("expected custom 404 page body, got %q", rr.Body.String())
 	}
 }

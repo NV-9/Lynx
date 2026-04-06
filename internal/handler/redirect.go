@@ -16,7 +16,7 @@ func (h *Handler) RedirectSlug(w http.ResponseWriter, r *http.Request) {
 		`SELECT id, url FROM links WHERE slug = ?`, slug,
 	).Scan(&linkID, &longURL)
 	if err == sql.ErrNoRows {
-		http.NotFound(w, r)
+		h.NotFoundPage(w, r)
 		return
 	}
 	if err != nil {

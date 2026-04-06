@@ -127,12 +127,17 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		if _, err := h.db.ExecContext(r.Context(),
 			`INSERT INTO links (slug, url) VALUES (?, ?)`, slug, longURL,
 		); err != nil {
-			http.Error(w, "slug already exists", http.StatusConflict)
+			if isSlugConflictError(err) {
+				http.Error(w, "slug already exists", http.StatusConflict)
+				return
+			}
+			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
 	} else {
+		const maxAttempts = 8
 		var insertErr error
-		for range 8 {
+		for i := 0; i < maxAttempts; i++ {
 			slug = generateSlug()
 			if isReservedSlug(slug) {
 				continue
@@ -143,9 +148,13 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 			if insertErr == nil {
 				break
 			}
+			if !isSlugConflictError(insertErr) {
+				http.Error(w, "database error", http.StatusInternalServerError)
+				return
+			}
 		}
 		if insertErr != nil {
-			http.Error(w, "database error", http.StatusInternalServerError)
+			http.Error(w, "could not generate a unique slug, try again", http.StatusConflict)
 			return
 		}
 	}
@@ -247,4 +256,11 @@ func isReservedSlug(slug string) bool {
 		return true
 	}
 	return strings.HasPrefix(normalized, "api/") || strings.HasPrefix(normalized, "static/")
+}
+
+func isSlugConflictError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "unique constraint failed: links.slug")
 }

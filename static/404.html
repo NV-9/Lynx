@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lynx - Page Not Found</title>
+  <style>
+    :root {
+      --bgA: #fff6e8;
+      --bgB: #ebf9f7;
+      --card: rgba(255, 255, 255, 0.85);
+      --line: rgba(15, 42, 49, 0.13);
+      --ink: #1f3138;
+      --muted: #5b6870;
+      --brand: #0d7f76;
+      --brand-dark: #085e59;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      background:
+        radial-gradient(1000px 500px at 8% -10%, #ffd089 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 10%, #a9efe7 0%, transparent 56%),
+        linear-gradient(135deg, var(--bgA), var(--bgB));
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+    .card {
+      width: min(100%, 640px);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 20px 40px rgba(12, 45, 44, 0.1);
+      padding: 1.5rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .code {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 0.15rem 0.65rem;
+      background: rgba(13, 127, 118, 0.1);
+      color: var(--brand);
+      border: 1px solid rgba(13, 127, 118, 0.2);
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+    h1 {
+      margin: 0.25rem 0 0.35rem;
+      font-size: clamp(1.35rem, 3.8vw, 2rem);
+      line-height: 1.2;
+    }
+    p {
+      margin: 0.4rem 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border-radius: 0.7rem;
+      padding: 0.6rem 0.9rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+    }
+    .btn-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--brand), #0aa395);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+    }
+    .btn-secondary {
+      color: var(--ink);
+      border-color: rgba(15, 42, 49, 0.2);
+      background: rgba(255, 255, 255, 0.75);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.95);
+    }
+    #auth-note {
+      margin-top: 0.9rem;
+      font-size: 0.92rem;
+      color: var(--muted);
+      min-height: 1.3rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#0d7f76">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      Lynx
+    </div>
+
+    <span class="code">404</span>
+    <h1>This short link does not exist</h1>
+    <p>The URL you requested could not be found. It may have been deleted, mistyped, or never created.</p>
+
+    <p id="auth-note" aria-live="polite">Checking session...</p>
+
+    <div class="actions">
+      <a href="/" class="btn btn-primary">Go to Dashboard</a>
+      <a href="/login" class="btn btn-secondary">Go to Login</a>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const authNote = document.getElementById('auth-note');
+      let timer;
+
+      function startCountdown() {
+        let remaining = 5;
+        authNote.textContent = 'You are signed in. Redirecting to dashboard in ' + remaining + 's...';
+        timer = window.setInterval(function () {
+          remaining -= 1;
+          if (remaining <= 0) {
+            window.clearInterval(timer);
+            window.location.href = '/';
+            return;
+          }
+          authNote.textContent = 'You are signed in. Redirecting to dashboard in ' + remaining + 's...';
+        }, 1000);
+      }
+
+      fetch('/api/me', { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) {
+            authNote.textContent = 'Sign in to manage links, or stay here and check the URL.';
+            return;
+          }
+          startCountdown();
+        })
+        .catch(function () {
+          authNote.textContent = 'Sign in to manage links, or stay here and check the URL.';
+        });
+    })();
+  </script>
+</body>
+</html>

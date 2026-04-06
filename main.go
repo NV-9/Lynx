@@ -66,6 +66,7 @@ func main() {
 	})
 
 	r.Get("/{slug}", h.RedirectSlug)
+	r.NotFound(h.NotFoundPage)
 
 	log.Printf("Lynx listening on :%s (base URL: %s)", cfg.Port, cfg.BaseURL)
 	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
