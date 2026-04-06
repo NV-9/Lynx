@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — Lynx</title>
+  <link rel="stylesheet" href="/static/styles.css" onerror="(function(){var s=document.createElement('script');s.src='https://cdn.tailwindcss.com';document.head.appendChild(s)})()">
+  <style>
+    :root {
+      --ink: #1f3138;
+      --card: rgba(255,255,255,0.86);
+      --line: rgba(25, 47, 52, 0.16);
+      --brand: #0a8077;
+      --brand-dark: #07655e;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1000px 500px at -10% 0%, #ffe2a2 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 10%, #bdf0e8 0%, transparent 56%),
+        linear-gradient(145deg, #fff6e8, #ecf9f7);
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+    .card {
+      width: min(100%, 420px);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 18px 36px rgba(17, 39, 43, 0.12);
+      backdrop-filter: blur(8px);
+    }
+    .btn-brand { background: linear-gradient(135deg, var(--brand), #0ea89a); color: white; }
+    .btn-brand:hover { background: linear-gradient(135deg, var(--brand-dark), var(--brand)); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="text-center mb-6">
+      <div class="flex items-center justify-center gap-2 mb-2">
+        <svg class="w-8 h-8 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span class="text-2xl font-bold">Lynx</span>
+      </div>
+      <p class="text-sm text-slate-600">Sign in to manage your links</p>
+    </div>
+
+    <div id="error-banner" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+
+    <form method="POST" action="/login" class="space-y-4">
+      <div>
+        <label for="username" class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+        <input
+          id="username" name="username" type="text" required autocomplete="username"
+          class="w-full rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent"
+        />
+      </div>
+      <div>
+        <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+        <input
+          id="password" name="password" type="password" required autocomplete="current-password"
+          class="w-full rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent"
+        />
+      </div>
+      <button
+        type="submit"
+        class="btn-brand w-full text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+      >
+        Sign In
+      </button>
+    </form>
+  </main>
+
+  <script>
+    const error = new URLSearchParams(window.location.search).get('error');
+    if (error) {
+      const banner = document.getElementById('error-banner');
+      banner.textContent = error;
+      banner.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

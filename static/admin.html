@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Lynx</title>
+  <link rel="stylesheet" href="/static/styles.css" onerror="(function(){var s=document.createElement('script');s.src='https://cdn.tailwindcss.com';document.head.appendChild(s)})()">
+  <style>
+    :root {
+      --bgA: #f6f7ff;
+      --bgB: #eefcf7;
+      --card: rgba(255, 255, 255, 0.88);
+      --line: rgba(38, 53, 68, 0.13);
+      --ink: #1f2f3e;
+      --brand: #0e7d73;
+    }
+    body {
+      background:
+        radial-gradient(900px 500px at -10% 0%, #d7e3ff 0%, transparent 60%),
+        radial-gradient(900px 500px at 120% 0%, #b1f1de 0%, transparent 55%),
+        linear-gradient(140deg, var(--bgA), var(--bgB));
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+    }
+    .glass {
+      background: var(--card);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 16px 34px rgba(19, 33, 55, 0.08);
+    }
+    .btn-brand { background: linear-gradient(135deg, var(--brand), #0aa393); color: #fff; }
+    .btn-brand:hover { background: linear-gradient(135deg, #0a5d58, var(--brand)); }
+    .toast-wrap {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 60;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 0.65rem 0.8rem;
+      border-radius: 0.75rem;
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.16);
+      animation: fadeIn 180ms ease-out;
+    }
+    .toast.info { background: #0e7d73; }
+    .toast.error { background: #c0392b; }
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: grid;
+      place-items: center;
+      z-index: 70;
+      padding: 1rem;
+    }
+    .confirm-card {
+      width: min(100%, 360px);
+      background: #fff;
+      border: 1px solid #dbe1e4;
+      border-radius: 0.9rem;
+      padding: 1rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .inline-note {
+      margin-top: 0.75rem;
+      border-radius: 0.7rem;
+      padding: 0.5rem 0.7rem;
+      font-size: 0.86rem;
+      border: 1px solid transparent;
+      display: none;
+    }
+    .inline-note.info {
+      display: block;
+      color: #0b5f58;
+      border-color: rgba(11,95,88,0.25);
+      background: rgba(11,95,88,0.08);
+    }
+    .inline-note.error {
+      display: block;
+      color: #8f2a1f;
+      border-color: rgba(143,42,31,0.25);
+      background: rgba(192,57,43,0.1);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header class="px-4 pt-5 sm:px-6">
+    <div class="max-w-6xl mx-auto glass rounded-2xl px-4 py-3 sm:px-6 flex items-center gap-3">
+      <h1 class="text-lg font-semibold">Admin Control</h1>
+      <a href="/" class="ml-auto text-sm text-teal-700 hover:text-teal-900">Back to dashboard</a>
+      <form method="POST" action="/logout">
+        <button type="submit" class="text-sm text-slate-500 hover:text-slate-800">Sign out</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-6">
+    <section class="glass rounded-2xl p-4 sm:p-6">
+      <h2 class="text-base sm:text-lg font-semibold mb-4">Create User</h2>
+      <form id="create-user-form" class="grid gap-3 sm:grid-cols-4">
+        <input name="username" type="text" required placeholder="username" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2.5 text-sm" />
+        <input name="password" type="password" required minlength="8" placeholder="password" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2.5 text-sm" />
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+          <input name="is_admin" type="checkbox" class="rounded border-slate-300" />
+          Admin
+        </label>
+        <button type="submit" class="btn-brand text-sm font-semibold px-4 py-2.5 rounded-xl">Create</button>
+      </form>
+      <p id="create-user-message" class="mt-3 text-sm"></p>
+      <div id="create-user-inline" class="inline-note" aria-live="polite"></div>
+    </section>
+
+    <section class="glass rounded-2xl p-4 sm:p-6">
+      <h2 class="text-base sm:text-lg font-semibold mb-4">Users</h2>
+      <div id="users-table"><p class="text-sm text-slate-500">Loading...</p></div>
+      <div id="users-inline" class="inline-note" aria-live="polite"></div>
+    </section>
+
+  </main>
+
+  <div id="toast-wrap" class="toast-wrap" aria-live="polite"></div>
+
+  <script>
+    function escapeHtml(input) {
+      return String(input)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showToast(message, type = 'info') {
+      const wrap = document.getElementById('toast-wrap');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      wrap.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 2600);
+    }
+
+    function showInline(targetId, message, type = 'info', ms = 2600) {
+      const el = document.getElementById(targetId);
+      if (!el) {
+        return;
+      }
+      el.className = 'inline-note ' + type;
+      el.textContent = message;
+      window.setTimeout(() => {
+        el.className = 'inline-note';
+        el.textContent = '';
+      }, ms);
+    }
+
+    function confirmAction(message, confirmText = 'Delete') {
+      return new Promise((resolve) => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'confirm-backdrop';
+        backdrop.innerHTML = `
+          <div class="confirm-card">
+            <p class="text-sm text-slate-700 mb-4">${escapeHtml(message)}</p>
+            <div class="flex justify-end gap-2">
+              <button class="cancel px-3 py-1.5 rounded-lg border border-slate-300 text-sm">Cancel</button>
+              <button class="ok px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-sm">${escapeHtml(confirmText)}</button>
+            </div>
+          </div>`;
+        document.body.appendChild(backdrop);
+        backdrop.querySelector('.cancel').addEventListener('click', () => {
+          backdrop.remove();
+          resolve(false);
+        });
+        backdrop.querySelector('.ok').addEventListener('click', () => {
+          backdrop.remove();
+          resolve(true);
+        });
+      });
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/api/users', { credentials: 'same-origin' });
+      if (!res.ok) {
+        document.getElementById('users-table').innerHTML = '<p class="text-sm text-red-600">Failed to load users.</p>';
+        showInline('users-inline', 'Failed to load users.', 'error', 3200);
+        return;
+      }
+
+      const payload = await res.json();
+      const users = payload.items || [];
+      if (!users.length) {
+        document.getElementById('users-table').innerHTML = '<p class="text-sm text-slate-500">No users found.</p>';
+        return;
+      }
+
+      const rows = users.map((u) => {
+        const created = new Date(u.created_at);
+        const createdText = Number.isNaN(created.getTime()) ? '-' : created.toLocaleString();
+        return `
+          <tr class="border-t border-gray-100">
+            <td class="py-2 px-3 text-sm text-slate-700">${escapeHtml(u.username)}</td>
+            <td class="py-2 px-3 text-sm text-slate-600">${createdText}</td>
+            <td class="py-2 px-3 text-sm text-slate-600">${u.is_admin ? 'Yes' : 'No'}</td>
+            <td class="py-2 px-3 text-right">
+              <button class="toggle-admin px-2 py-1 text-xs rounded-lg border border-slate-300" data-id="${u.id}" data-admin="${u.is_admin}">${u.is_admin ? 'Remove admin' : 'Make admin'}</button>
+              <button class="delete-user ml-2 px-2 py-1 text-xs rounded-lg border border-red-300 text-red-600" data-id="${u.id}">Delete</button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      document.getElementById('users-table').innerHTML = `
+        <div class="overflow-x-auto">
+          <table class="w-full text-left min-w-[620px]">
+            <thead>
+              <tr class="text-xs text-slate-500 uppercase tracking-wide">
+                <th class="py-2 px-3">Username</th>
+                <th class="py-2 px-3">Created</th>
+                <th class="py-2 px-3">Admin</th>
+                <th class="py-2 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+
+      document.querySelectorAll('.toggle-admin').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const next = btn.dataset.admin !== 'true';
+          const resp = await fetch('/api/users/' + btn.dataset.id + '/admin', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ is_admin: next })
+          });
+          if (resp.ok) {
+            showToast('Admin role updated.', 'info');
+            showInline('users-inline', 'Admin role updated.', 'info');
+            loadUsers();
+          } else {
+            const msg = await resp.text();
+            showToast(msg || 'Failed to update role.', 'error');
+            showInline('users-inline', msg || 'Failed to update role.', 'error', 3200);
+          }
+        });
+      });
+
+      document.querySelectorAll('.delete-user').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const confirmed = await confirmAction('Delete this user account?', 'Delete');
+          if (!confirmed) {
+            return;
+          }
+          const resp = await fetch('/api/users/' + btn.dataset.id, {
+            method: 'DELETE',
+            credentials: 'same-origin'
+          });
+          if (!resp.ok) {
+            const msg = await resp.text();
+            showToast(msg || 'Failed to delete user', 'error');
+            showInline('users-inline', msg || 'Failed to delete user', 'error', 3200);
+            return;
+          }
+          showToast('User deleted.', 'info');
+          showInline('users-inline', 'User deleted.', 'info');
+          loadUsers();
+        });
+      });
+    }
+
+    document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const data = new FormData(form);
+      const payload = {
+        username: String(data.get('username') || '').trim(),
+        password: String(data.get('password') || ''),
+        is_admin: data.get('is_admin') !== null
+      };
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const msg = document.getElementById('create-user-message');
+      if (!res.ok) {
+        msg.className = 'mt-3 text-sm text-red-600';
+        msg.textContent = await res.text();
+        showToast(msg.textContent || 'Failed to create user', 'error');
+        showInline('create-user-inline', msg.textContent || 'Failed to create user', 'error', 3200);
+        return;
+      }
+
+      form.reset();
+      msg.className = 'mt-3 text-sm text-green-600';
+      msg.textContent = 'User created.';
+      showToast('User created.', 'info');
+      showInline('create-user-inline', 'User created.', 'info');
+      loadUsers();
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>

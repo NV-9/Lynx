@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lynx - URL Shortener</title>
+  <link rel="stylesheet" href="/static/styles.css" onerror="(function(){var s=document.createElement('script');s.src='https://cdn.tailwindcss.com';document.head.appendChild(s)})()">
+  <script src="/static/htmx.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/htmx.org@1.9.12';document.head.appendChild(s)})()"></script>
+  <style>
+    :root {
+      --bgA: #fff6e8;
+      --bgB: #ebf9f7;
+      --card: rgba(255, 255, 255, 0.82);
+      --line: rgba(15, 42, 49, 0.13);
+      --ink: #1f3138;
+      --brand: #0d7f76;
+      --brand-dark: #085e59;
+      --danger: #c0392b;
+    }
+    body {
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1000px 500px at 8% -10%, #ffd089 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 10%, #a9efe7 0%, transparent 56%),
+        linear-gradient(135deg, var(--bgA), var(--bgB));
+      min-height: 100vh;
+    }
+    .glass {
+      background: var(--card);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 20px 40px rgba(12, 45, 44, 0.08);
+    }
+    .btn-brand {
+      background: linear-gradient(135deg, var(--brand), #0aa395);
+      color: white;
+    }
+    .btn-brand:hover { background: linear-gradient(135deg, var(--brand-dark), var(--brand)); }
+    .btn-danger {
+      color: var(--danger);
+      border-color: rgba(192, 57, 43, 0.35);
+    }
+    .fade-enter {
+      animation: fadeIn 220ms ease-out;
+    }
+    .toast-wrap {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 60;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 0.65rem 0.8rem;
+      border-radius: 0.75rem;
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.16);
+      animation: fadeIn 180ms ease-out;
+    }
+    .toast.info { background: #0d7f76; }
+    .toast.error { background: #c0392b; }
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: grid;
+      place-items: center;
+      z-index: 70;
+      padding: 1rem;
+    }
+    .confirm-card {
+      width: min(100%, 360px);
+      background: #fff;
+      border: 1px solid #dbe1e4;
+      border-radius: 0.9rem;
+      padding: 1rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .inline-note {
+      margin-top: 0.75rem;
+      border-radius: 0.7rem;
+      padding: 0.5rem 0.7rem;
+      font-size: 0.86rem;
+      border: 1px solid transparent;
+      display: none;
+    }
+    .inline-note.info {
+      display: block;
+      color: #0b5f58;
+      border-color: rgba(11,95,88,0.25);
+      background: rgba(11,95,88,0.08);
+    }
+    .inline-note.error {
+      display: block;
+      color: #8f2a1f;
+      border-color: rgba(143,42,31,0.25);
+      background: rgba(192,57,43,0.1);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header class="px-4 pt-5 sm:px-6">
+    <div class="max-w-5xl mx-auto glass rounded-2xl px-4 py-3 sm:px-6 flex items-center gap-3">
+      <svg class="w-7 h-7 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      <div>
+        <h1 class="text-lg sm:text-xl font-semibold tracking-tight">Lynx</h1>
+        <p class="text-xs text-slate-500">Fast links, clean control.</p>
+      </div>
+
+      <div id="nav-actions" class="ml-auto min-w-[170px] flex items-center justify-end gap-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <a id="admin-link" href="/admin" class="text-sm text-slate-600 hover:text-slate-900 hidden">Admin</a>
+        <form method="POST" action="/logout">
+          <button type="submit" class="text-sm text-slate-500 hover:text-slate-800 transition-colors">Sign out</button>
+        </form>
+      </div>
+      <div id="nav-placeholder" class="ml-auto min-w-[170px] flex items-center justify-end">
+        <span class="text-xs text-slate-400">Loading account...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-6 sm:space-y-8">
+    <section class="glass rounded-2xl p-4 sm:p-6 fade-enter">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 class="text-base sm:text-lg font-semibold">Create A Short Link</h2>
+        <span class="text-xs text-slate-500 hidden sm:inline">Slug is optional</span>
+      </div>
+      <form
+        hx-post="/api/shorten"
+        hx-target="#shorten-result"
+        hx-swap="innerHTML"
+        hx-on::after-request="if(event.detail.successful) { this.reset(); }"
+        class="grid gap-3 sm:grid-cols-3"
+      >
+        <input
+          type="url"
+          name="url"
+          required
+          placeholder="https://example.com/very/long/url"
+          class="sm:col-span-2 w-full rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent"
+        />
+        <input
+          type="text"
+          name="slug"
+          placeholder="custom slug"
+          pattern="[A-Za-z0-9]{3,32}"
+          title="3-32 alphanumeric characters"
+          class="w-full rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent"
+        />
+        <button
+          type="submit"
+          class="btn-brand sm:col-span-3 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+        >
+          Shorten URL
+        </button>
+      </form>
+      <div id="shorten-result" class="mt-3"></div>
+      <div id="shorten-inline" class="inline-note" aria-live="polite"></div>
+    </section>
+
+    <section class="glass rounded-2xl p-4 sm:p-6 fade-enter">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <h2 class="text-base sm:text-lg font-semibold">All Links</h2>
+        <input
+          id="filter-input"
+          type="text"
+          placeholder="Filter by slug or destination URL"
+          class="sm:ml-auto w-full sm:w-80 rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent"
+        />
+      </div>
+      <div id="links-table">
+        <p class="text-sm text-slate-500">Loading...</p>
+      </div>
+      <div id="links-inline" class="inline-note" aria-live="polite"></div>
+      <div id="pagination" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-600"></div>
+    </section>
+
+    <section class="glass rounded-2xl p-4 sm:p-6 fade-enter">
+      <div class="flex flex-col gap-3 mb-4">
+        <h2 class="text-base sm:text-lg font-semibold">Link Analytics</h2>
+        <div class="grid gap-2 sm:grid-cols-4">
+          <input id="analytics-slug" type="text" placeholder="Slug filter (optional)" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
+          <input id="analytics-start" type="date" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
+          <input id="analytics-end" type="date" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
+          <button id="analytics-apply" type="button" class="btn-brand rounded-xl px-3 py-2 text-sm font-semibold">Apply Filters</button>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-slate-200/70 bg-white/75 p-3">
+          <h3 class="text-sm font-semibold mb-2">Daily Access Trend</h3>
+          <div id="analytics-daily" class="space-y-1 text-sm text-slate-700"></div>
+        </div>
+        <div class="rounded-xl border border-slate-200/70 bg-white/75 p-3">
+          <h3 class="text-sm font-semibold mb-2">Top Links</h3>
+          <div id="analytics-top" class="space-y-2 text-sm text-slate-700"></div>
+        </div>
+      </div>
+
+      <div id="analytics-inline" class="inline-note" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div id="toast-wrap" class="toast-wrap" aria-live="polite"></div>
+
+  <script>
+    let currentPage = 1;
+    let currentFilter = '';
+    let isAdminUser = false;
+    let analyticsSlug = '';
+    let analyticsStart = '';
+    let analyticsEnd = '';
+
+    function escapeHtml(input) {
+      return String(input)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showToast(message, type = 'info') {
+      const wrap = document.getElementById('toast-wrap');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      wrap.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 2600);
+    }
+
+    function showInline(targetId, message, type = 'info', ms = 2600) {
+      const el = document.getElementById(targetId);
+      if (!el) {
+        return;
+      }
+      el.className = 'inline-note ' + type;
+      el.textContent = message;
+      window.setTimeout(() => {
+        el.className = 'inline-note';
+        el.textContent = '';
+      }, ms);
+    }
+
+    function confirmAction(message) {
+      return new Promise((resolve) => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'confirm-backdrop';
+        backdrop.innerHTML = `
+          <div class="confirm-card">
+            <p class="text-sm text-slate-700 mb-4">${escapeHtml(message)}</p>
+            <div class="flex justify-end gap-2">
+              <button class="cancel px-3 py-1.5 rounded-lg border border-slate-300 text-sm">Cancel</button>
+              <button class="ok px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-sm">Delete</button>
+            </div>
+          </div>`;
+        document.body.appendChild(backdrop);
+        backdrop.querySelector('.cancel').addEventListener('click', () => {
+          backdrop.remove();
+          resolve(false);
+        });
+        backdrop.querySelector('.ok').addEventListener('click', () => {
+          backdrop.remove();
+          resolve(true);
+        });
+      });
+    }
+
+    async function loadCurrentUser() {
+      try {
+        const res = await fetch('/api/me', { credentials: 'same-origin' });
+        if (!res.ok) {
+          finalizeNav();
+          return;
+        }
+        const me = await res.json();
+        isAdminUser = !!(me && me.is_admin === true);
+        if (isAdminUser) {
+          document.getElementById('admin-link').classList.remove('hidden');
+        }
+        finalizeNav();
+      } catch (_) {
+        finalizeNav();
+      }
+    }
+
+    function finalizeNav() {
+      document.getElementById('nav-placeholder').classList.add('hidden');
+      const actions = document.getElementById('nav-actions');
+      actions.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    async function deleteLink(id) {
+      if (!isAdminUser) {
+        return;
+      }
+      const confirmed = await confirmAction('Delete this link? This cannot be undone.');
+      if (!confirmed) {
+        return;
+      }
+      const res = await fetch('/api/links/' + id, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        showToast(msg || 'Failed to delete link', 'error');
+        showInline('links-inline', msg || 'Failed to delete link', 'error');
+        return;
+      }
+      showToast('Link deleted.', 'info');
+      showInline('links-inline', 'Link deleted.', 'info');
+      loadLinks();
+    }
+
+    async function copyLink(slug) {
+      const linkUrl = `${window.location.origin}/${slug}`;
+      try {
+        await navigator.clipboard.writeText(linkUrl);
+        showToast('Link copied to clipboard!', 'info');
+      } catch (_) {
+        showToast('Failed to copy link', 'error');
+      }
+    }
+
+    function renderTable(resp) {
+      const table = document.getElementById('links-table');
+      const pager = document.getElementById('pagination');
+      if (!resp.items || resp.items.length === 0) {
+        table.innerHTML = '<p class="text-sm text-slate-500">No links found.</p>';
+        pager.innerHTML = '';
+        return;
+      }
+
+      const actionHeader = isAdminUser ? '<th class="py-2 px-3 text-right">Actions</th>' : '';
+      const rows = resp.items.map((l) => {
+        const created = new Date(l.created_at);
+        const createdLabel = Number.isNaN(created.getTime()) ? '-' : created.toLocaleString();
+        const actions = isAdminUser
+          ? `<td class="py-2.5 px-3 text-right"><button class="btn-danger px-2.5 py-1 rounded-lg border text-xs" data-delete-id="${l.id}">Delete</button></td>`
+          : '';
+        return `
+          <tr class="border-t border-slate-200/70 hover:bg-white/50 transition-colors">
+            <td class="py-2.5 px-3 font-mono text-sm text-teal-700">
+              <div class="flex items-center gap-2">
+                <a href="/${encodeURIComponent(l.slug)}" target="_blank" class="hover:underline">/${escapeHtml(l.slug)}</a>
+                <button class="copy-link-btn p-1 rounded-md hover:bg-teal-50 transition-colors" data-slug="${escapeHtml(l.slug)}" title="Copy link" aria-label="Copy link">
+                  <svg class="w-4 h-4 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+            <td class="py-2.5 px-3 text-sm text-slate-700 max-w-xs truncate">
+              <a href="${escapeHtml(l.url)}" target="_blank" class="hover:underline" title="${escapeHtml(l.url)}">${escapeHtml(l.url)}</a>
+            </td>
+            <td class="py-2.5 px-3 text-sm text-slate-600 text-right">${l.access_count}</td>
+            <td class="py-2.5 px-3 text-xs text-slate-500 text-right whitespace-nowrap">${createdLabel}</td>
+            ${actions}
+          </tr>`;
+      }).join('');
+
+      table.innerHTML = `
+        <div class="overflow-x-auto">
+          <table class="w-full text-left min-w-[720px]">
+            <thead>
+              <tr class="text-xs text-slate-500 uppercase tracking-wide">
+                <th class="py-2 px-3">Short link</th>
+                <th class="py-2 px-3">Destination</th>
+                <th class="py-2 px-3 text-right">Accesses</th>
+                <th class="py-2 px-3 text-right">Created</th>
+                ${actionHeader}
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+
+      if (isAdminUser) {
+        table.querySelectorAll('button[data-delete-id]').forEach((btn) => {
+          btn.addEventListener('click', () => deleteLink(btn.dataset.deleteId));
+        });
+      }
+
+      table.querySelectorAll('button.copy-link-btn').forEach((btn) => {
+        btn.addEventListener('click', () => copyLink(btn.dataset.slug));
+      });
+
+      const prevDisabled = resp.page <= 1 ? 'disabled opacity-50 cursor-not-allowed' : '';
+      const nextDisabled = resp.page >= resp.total_pages ? 'disabled opacity-50 cursor-not-allowed' : '';
+      pager.innerHTML = `
+        <div>Page ${resp.page} of ${Math.max(resp.total_pages, 1)} (${resp.total} links)</div>
+        <div class="flex gap-2">
+          <button id="prev-page" class="px-3 py-1 rounded-lg border border-slate-300 ${prevDisabled}">Previous</button>
+          <button id="next-page" class="px-3 py-1 rounded-lg border border-slate-300 ${nextDisabled}">Next</button>
+        </div>`;
+
+      const prevBtn = document.getElementById('prev-page');
+      const nextBtn = document.getElementById('next-page');
+      if (prevBtn) {
+        prevBtn.onclick = () => {
+          if (currentPage > 1) {
+            currentPage -= 1;
+            loadLinks();
+          }
+        };
+      }
+      if (nextBtn) {
+        nextBtn.onclick = () => {
+          if (currentPage < resp.total_pages) {
+            currentPage += 1;
+            loadLinks();
+          }
+        };
+      }
+    }
+
+    async function loadLinks() {
+      const params = new URLSearchParams({ page: String(currentPage), size: '20' });
+      if (currentFilter) {
+        params.set('filter', currentFilter);
+      }
+
+      const res = await fetch('/api/links?' + params.toString(), { credentials: 'same-origin' });
+      if (!res.ok) {
+        document.getElementById('links-table').innerHTML = '<p class="text-sm text-red-600">Failed to load links.</p>';
+        showInline('links-inline', 'Failed to load links.', 'error', 3200);
+        return;
+      }
+
+      const data = await res.json();
+      renderTable(data);
+    }
+
+    function renderAnalytics(payload) {
+      const dailyHost = document.getElementById('analytics-daily');
+      const topHost = document.getElementById('analytics-top');
+
+      if (!payload.daily || payload.daily.length === 0) {
+        dailyHost.innerHTML = '<p class="text-slate-500">No daily data available.</p>';
+      } else {
+        const max = payload.daily.reduce((m, p) => Math.max(m, p.access_count), 0) || 1;
+        dailyHost.innerHTML = payload.daily.map((p) => {
+          const width = Math.max(4, Math.round((p.access_count / max) * 100));
+          return `<div>
+            <div class="flex items-center justify-between text-xs text-slate-500"><span>${escapeHtml(p.date)}</span><span>${p.access_count}</span></div>
+            <div class="h-2 bg-slate-100 rounded"><div class="h-2 bg-teal-500 rounded" style="width:${width}%"></div></div>
+          </div>`;
+        }).join('');
+      }
+
+      if (!payload.top_links || payload.top_links.length === 0) {
+        topHost.innerHTML = '<p class="text-slate-500">No accesses recorded for this filter.</p>';
+      } else {
+        topHost.innerHTML = payload.top_links.map((l) => {
+          return `<div class="rounded-lg border border-slate-200/70 p-2">
+            <div class="font-mono text-teal-700">/${escapeHtml(l.slug)}</div>
+            <div class="text-xs text-slate-500 truncate" title="${escapeHtml(l.url)}">${escapeHtml(l.url)}</div>
+            <div class="text-xs mt-1">Accesses: <strong>${l.access_count}</strong></div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    async function loadAnalytics() {
+      const params = new URLSearchParams();
+      if (analyticsSlug) {
+        params.set('slug', analyticsSlug);
+      }
+      if (analyticsStart) {
+        params.set('start_date', analyticsStart);
+      }
+      if (analyticsEnd) {
+        params.set('end_date', analyticsEnd);
+      }
+      params.set('top', '10');
+
+      const res = await fetch('/api/analytics?' + params.toString(), { credentials: 'same-origin' });
+      if (!res.ok) {
+        const msg = await res.text();
+        showInline('analytics-inline', msg || 'Failed to load analytics.', 'error', 3200);
+        return;
+      }
+
+      const payload = await res.json();
+      renderAnalytics(payload);
+    }
+
+    document.body.addEventListener('htmx:afterRequest', function (evt) {
+      if (evt.detail.elt && evt.detail.elt.getAttribute('hx-post') === '/api/shorten' && evt.detail.successful) {
+        currentPage = 1;
+        showToast('Short link created.', 'info');
+        showInline('shorten-inline', 'Short link created.', 'info');
+        loadLinks();
+        loadAnalytics();
+      } else if (evt.detail.elt && evt.detail.elt.getAttribute('hx-post') === '/api/shorten' && !evt.detail.successful) {
+        showToast('Could not create short link.', 'error');
+        showInline('shorten-inline', 'Could not create short link.', 'error', 3200);
+      }
+    });
+
+    let filterTimer;
+    document.getElementById('filter-input').addEventListener('input', function () {
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(() => {
+        currentFilter = this.value.trim();
+        currentPage = 1;
+        loadLinks();
+      }, 250);
+    });
+
+    document.getElementById('analytics-apply').addEventListener('click', function () {
+      analyticsSlug = document.getElementById('analytics-slug').value.trim();
+      analyticsStart = document.getElementById('analytics-start').value;
+      analyticsEnd = document.getElementById('analytics-end').value;
+      loadAnalytics();
+    });
+
+    Promise.all([loadCurrentUser()]).then(() => {
+      loadLinks();
+      loadAnalytics();
+    });
+  </script>
+</body>
+</html>
