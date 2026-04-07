@@ -193,10 +193,22 @@
       <div class="flex flex-col gap-3 mb-4">
         <h2 class="text-base sm:text-lg font-semibold">Link Analytics</h2>
         <div class="grid gap-2 sm:grid-cols-4">
-          <input id="analytics-slug" type="text" placeholder="Slug filter (optional)" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
-          <input id="analytics-start" type="date" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
-          <input id="analytics-end" type="date" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
-          <button id="analytics-apply" type="button" class="btn-brand rounded-xl px-3 py-2 text-sm font-semibold">Apply Filters</button>
+          <div class="flex flex-col gap-1">
+            <label for="analytics-slug" class="text-xs font-medium text-slate-500 px-1">Slug</label>
+            <input id="analytics-slug" type="text" placeholder="Filter by slug" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="analytics-start" class="text-xs font-medium text-slate-500 px-1">From</label>
+            <input id="analytics-start" type="date" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="analytics-end" class="text-xs font-medium text-slate-500 px-1">To</label>
+            <input id="analytics-end" type="date" class="rounded-xl border border-slate-300/70 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-medium text-slate-500 px-1 invisible select-none">Apply</span>
+            <button id="analytics-apply" type="button" class="btn-brand rounded-xl px-3 py-2 text-sm font-semibold">Apply Filters</button>
+          </div>
         </div>
       </div>
 
