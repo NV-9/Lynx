@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -15,9 +16,18 @@ const UserIDKey contextKey = "userID"
 func RequireAuth(db *sql.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			isAPI := strings.HasPrefix(r.URL.Path, "/api/")
+			deny := func() {
+				if isAPI {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+				} else {
+					http.Redirect(w, r, "/login", http.StatusSeeOther)
+				}
+			}
+
 			cookie, err := r.Cookie("session_id")
 			if err != nil {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				deny()
 				return
 			}
 
@@ -28,13 +38,13 @@ func RequireAuth(db *sql.DB) func(http.Handler) http.Handler {
 			).Scan(&userID, &expiresAt)
 			if err != nil {
 				log.Printf("[auth] session lookup failed (id=%.8s...): %v", cookie.Value, err)
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				deny()
 				return
 			}
 
 			if time.Now().UTC().After(expiresAt.UTC()) {
 				log.Printf("[auth] session %.8s... expired (expires_at=%s)", cookie.Value, expiresAt.UTC().Format(time.RFC3339))
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				deny()
 				return
 			}
 
