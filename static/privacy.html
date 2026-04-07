@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lynx - Privacy Policy</title>
+  <style>
+    :root {
+      --bgA: #fff6e8;
+      --bgB: #ebf9f7;
+      --card: rgba(255, 255, 255, 0.85);
+      --line: rgba(15, 42, 49, 0.13);
+      --ink: #1f3138;
+      --muted: #5b6870;
+      --brand: #0d7f76;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      background:
+        radial-gradient(1000px 500px at 8% -10%, #ffd089 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 10%, #a9efe7 0%, transparent 56%),
+        linear-gradient(135deg, var(--bgA), var(--bgB));
+      display: grid;
+      place-items: start center;
+      padding: 2rem 1rem;
+    }
+    .card {
+      width: min(100%, 680px);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 20px 40px rgba(12, 45, 44, 0.1);
+      padding: 2rem 1.75rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      color: var(--brand);
+      text-decoration: none;
+    }
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.5rem;
+    }
+    .updated {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 1.75rem;
+    }
+    h2 {
+      font-size: 1rem;
+      margin: 1.5rem 0 0.4rem;
+    }
+    p, li {
+      margin: 0.35rem 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.92rem;
+    }
+    ul {
+      padding-left: 1.25rem;
+      margin: 0.4rem 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <a href="/" class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      Lynx
+    </a>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">This policy explains what data Lynx collects when a short link is followed.</p>
+
+    <h2>What we collect</h2>
+    <p>When you follow a Lynx short link, the following is recorded:</p>
+    <ul>
+      <li><strong>Timestamp:</strong> the date and time of the access.</li>
+      <li><strong>User-agent string:</strong> the browser or client identifier sent automatically by your browser (e.g. "Chrome/124", "Firefox/125").</li>
+    </ul>
+
+    <h2>What we do not collect</h2>
+    <ul>
+      <li>IP addresses</li>
+      <li>Location data</li>
+      <li>Cookies or tracking identifiers for visitors</li>
+      <li>Any personal account information</li>
+    </ul>
+
+    <h2>Why we collect it</h2>
+    <p>
+      The timestamp and user-agent are used solely to provide the owner of this Lynx instance with
+      aggregate analytics (for example, how many times a link was followed on a given day and which
+      browsers were used). This data is never sold or shared with third parties.
+    </p>
+
+    <h2>How long it is kept</h2>
+    <p>
+      Access records are stored for as long as the corresponding short link exists. Deleting a link
+      removes all associated access records.
+    </p>
+
+    <h2>Self-hosted software</h2>
+    <p>
+      Lynx is self-hosted, open-source software. The operator of this instance is responsible for
+      how data is handled. If you have questions about this specific deployment, contact the person
+      or organisation who shared the link with you.
+    </p>
+  </main>
+</body>
+</html>
