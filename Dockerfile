@@ -1,7 +1,8 @@
 # Stage 1: Build frontend assets (Tailwind CSS + HTMX)
 FROM node:20-alpine AS frontend
 WORKDIR /app
-RUN npm install -g tailwindcss@3
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g tailwindcss@3
 COPY tailwind.config.js .
 COPY static/ static/
 RUN tailwindcss -i static/input.css -o static/styles.css --minify && \
