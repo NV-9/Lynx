@@ -76,7 +76,39 @@ func migrate(db *sql.DB) error {
 		return err
 	}
 
+	if err := ensureLinkAccessEventsUserAgentColumn(db); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func ensureLinkAccessEventsUserAgentColumn(db *sql.DB) error {
+	rows, err := db.Query(`PRAGMA table_info(link_access_events)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull int
+		var dflt sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dflt, &pk); err != nil {
+			return err
+		}
+		if strings.EqualFold(name, "user_agent") {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`ALTER TABLE link_access_events ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''`)
+	return err
 }
 
 func ensureUsersIsAdminColumn(db *sql.DB) error {

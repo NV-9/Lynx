@@ -20,12 +20,18 @@ type AnalyticsTopLink struct {
 	AccessCount int    `json:"access_count"`
 }
 
+type AnalyticsUserAgent struct {
+	Browser string `json:"browser"`
+	Count   int    `json:"count"`
+}
+
 type AnalyticsResponse struct {
-	StartDate string             `json:"start_date"`
-	EndDate   string             `json:"end_date"`
-	Slug      string             `json:"slug"`
-	Daily     []AnalyticsDaily   `json:"daily"`
-	TopLinks  []AnalyticsTopLink `json:"top_links"`
+	StartDate  string               `json:"start_date"`
+	EndDate    string               `json:"end_date"`
+	Slug       string               `json:"slug"`
+	Daily      []AnalyticsDaily     `json:"daily"`
+	TopLinks   []AnalyticsTopLink   `json:"top_links"`
+	UserAgents []AnalyticsUserAgent `json:"user_agents"`
 }
 
 func (h *Handler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
@@ -58,14 +64,91 @@ func (h *Handler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userAgents, err := h.queryUserAgents(r, start, end, slug)
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(AnalyticsResponse{
-		StartDate: start.Format("2006-01-02"),
-		EndDate:   end.Format("2006-01-02"),
-		Slug:      slug,
-		Daily:     daily,
-		TopLinks:  topLinks,
+		StartDate:  start.Format("2006-01-02"),
+		EndDate:    end.Format("2006-01-02"),
+		Slug:       slug,
+		Daily:      daily,
+		TopLinks:   topLinks,
+		UserAgents: userAgents,
 	})
+}
+
+func parseUserAgent(ua string) string {
+	switch {
+	case strings.Contains(ua, "Edg/") || strings.Contains(ua, "Edge/"):
+		return "Edge"
+	case strings.Contains(ua, "OPR/") || strings.Contains(ua, "Opera"):
+		return "Opera"
+	case strings.Contains(ua, "Chrome/"):
+		return "Chrome"
+	case strings.Contains(ua, "Firefox/"):
+		return "Firefox"
+	case strings.Contains(ua, "Safari/") && strings.Contains(ua, "Version/"):
+		return "Safari"
+	case strings.Contains(ua, "curl/"):
+		return "curl"
+	case strings.Contains(strings.ToLower(ua), "python"):
+		return "Python"
+	case strings.Contains(ua, "Go-http-client"):
+		return "Go HTTP"
+	case ua == "":
+		return "Unknown"
+	default:
+		return "Other"
+	}
+}
+
+func (h *Handler) queryUserAgents(r *http.Request, start, end time.Time, slug string) ([]AnalyticsUserAgent, error) {
+	args := []any{start.Format("2006-01-02"), end.Format("2006-01-02")}
+	where := "WHERE date(e.accessed_at) BETWEEN date(?) AND date(?)"
+	if slug != "" {
+		where += " AND l.slug = ?"
+		args = append(args, slug)
+	}
+
+	query := `
+		SELECT e.user_agent
+		FROM link_access_events e
+		JOIN links l ON l.id = e.link_id
+		` + where
+
+	rows, err := h.db.QueryContext(r.Context(), query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var ua string
+		if err := rows.Scan(&ua); err != nil {
+			continue
+		}
+		counts[parseUserAgent(ua)]++
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	items := make([]AnalyticsUserAgent, 0, len(counts))
+	for browser, count := range counts {
+		items = append(items, AnalyticsUserAgent{Browser: browser, Count: count})
+	}
+	// sort descending by count
+	for i := 1; i < len(items); i++ {
+		for j := i; j > 0 && items[j].Count > items[j-1].Count; j-- {
+			items[j], items[j-1] = items[j-1], items[j]
+		}
+	}
+	return items, nil
 }
 
 func parseAnalyticsDateRange(r *http.Request) (time.Time, time.Time, error) {

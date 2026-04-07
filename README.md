@@ -21,10 +21,11 @@ The project is production-usable and still evolving. Current work is focused on 
 - [x] Link access metrics
 - [x] Filtered + paginated link API
 - [x] Admin-only link deletion
-- [ ] Link analytics breakdown by date/user-agent
+- [x] Link analytics breakdown by date range and top destinations
+- [x] User-agent capture on link access (browser breakdown)
+- [x] Privacy policy page
 
 ## Roadmap
-- Link analytics breakdown by date range and top destinations
 - CSV export for filtered link data
 - Optional webhook notifications for newly created links
 

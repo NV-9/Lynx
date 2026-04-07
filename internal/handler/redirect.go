@@ -24,7 +24,8 @@ func (h *Handler) RedirectSlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userAgent := r.Header.Get("User-Agent")
 	h.db.ExecContext(r.Context(), `UPDATE links SET clicks = clicks + 1 WHERE slug = ?`, slug)
-	h.db.ExecContext(r.Context(), `INSERT INTO link_access_events (link_id) VALUES (?)`, linkID)
+	h.db.ExecContext(r.Context(), `INSERT INTO link_access_events (link_id, user_agent) VALUES (?, ?)`, linkID, userAgent)
 	http.Redirect(w, r, longURL, http.StatusFound)
 }

@@ -212,7 +212,7 @@
         </div>
       </div>
 
-      <div class="grid gap-4 lg:grid-cols-2">
+      <div class="grid gap-4 lg:grid-cols-3">
         <div class="rounded-xl border border-slate-200/70 bg-white/75 p-3">
           <h3 class="text-sm font-semibold mb-2">Daily Access Trend</h3>
           <div id="analytics-daily" class="space-y-1 text-sm text-slate-700"></div>
@@ -221,11 +221,19 @@
           <h3 class="text-sm font-semibold mb-2">Top Links</h3>
           <div id="analytics-top" class="space-y-2 text-sm text-slate-700"></div>
         </div>
+        <div class="rounded-xl border border-slate-200/70 bg-white/75 p-3">
+          <h3 class="text-sm font-semibold mb-2">Browsers</h3>
+          <div id="analytics-browsers" class="space-y-2 text-sm text-slate-700"></div>
+        </div>
       </div>
 
       <div id="analytics-inline" class="inline-note" aria-live="polite"></div>
     </section>
   </main>
+
+  <footer class="max-w-5xl mx-auto px-4 py-4 sm:px-6 text-center text-xs text-slate-400">
+    <a href="/privacy" class="hover:text-slate-600 transition-colors">Privacy Policy</a>
+  </footer>
 
   <div id="toast-wrap" class="toast-wrap" aria-live="polite"></div>
 
@@ -464,6 +472,7 @@
     function renderAnalytics(payload) {
       const dailyHost = document.getElementById('analytics-daily');
       const topHost = document.getElementById('analytics-top');
+      const browsersHost = document.getElementById('analytics-browsers');
 
       if (!payload.daily || payload.daily.length === 0) {
         dailyHost.innerHTML = '<p class="text-slate-500">No daily data available.</p>';
@@ -486,6 +495,19 @@
             <div class="font-mono text-teal-700">/${escapeHtml(l.slug)}</div>
             <div class="text-xs text-slate-500 truncate" title="${escapeHtml(l.url)}">${escapeHtml(l.url)}</div>
             <div class="text-xs mt-1">Accesses: <strong>${l.access_count}</strong></div>
+          </div>`;
+        }).join('');
+      }
+
+      if (!payload.user_agents || payload.user_agents.length === 0) {
+        browsersHost.innerHTML = '<p class="text-slate-500">No browser data available.</p>';
+      } else {
+        const maxUA = payload.user_agents.reduce((m, b) => Math.max(m, b.count), 0) || 1;
+        browsersHost.innerHTML = payload.user_agents.map((b) => {
+          const width = Math.max(4, Math.round((b.count / maxUA) * 100));
+          return `<div>
+            <div class="flex items-center justify-between text-xs text-slate-500"><span>${escapeHtml(b.browser)}</span><span>${b.count}</span></div>
+            <div class="h-2 bg-slate-100 rounded"><div class="h-2 bg-teal-400 rounded" style="width:${width}%"></div></div>
           </div>`;
         }).join('');
       }

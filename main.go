@@ -46,6 +46,7 @@ func main() {
 	r.Get("/setup", h.SetupPage)
 	r.Post("/setup", h.Setup)
 	r.Post("/logout", h.Logout)
+	r.Get("/privacy", h.PrivacyPage)
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuth(db))
