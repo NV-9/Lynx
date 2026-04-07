@@ -1,6 +1,6 @@
 services:
   lynx:
-    image: ghcr.io/nv-9/lynx:1.0
+    image: ghcr.io/nv-9/lynx:latest
     ports:
       - "${PORT:-8080}:8080"
     volumes:
