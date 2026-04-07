@@ -539,6 +539,7 @@
 
     document.body.addEventListener('htmx:afterRequest', function (evt) {
       if (evt.detail.elt && evt.detail.elt.getAttribute('hx-post') === '/api/shorten' && evt.detail.successful) {
+        evt.detail.elt.reset();
         currentPage = 1;
         showToast('Short link created.', 'info');
         showInline('shorten-inline', 'Short link created.', 'info');
